@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Results - {{ course_code }}{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="/" style="text-decoration: none; color: var(--primary); font-weight: 600;">&larr; Back to Dashboard</a>
+    <h1 style="margin-top: 1rem;">Course Results: {{ course_code }}</h1>
+</div>
+
+{% if stats %}
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="card" style="margin-bottom: 0;">
+        <div style="color: var(--text-light); font-size: 0.875rem;">Average Score</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">{{ "%.1f"|format(stats.average_score) }}%</div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <div style="color: var(--text-light); font-size: 0.875rem;">Pass Rate</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">{{ "%.1f"|format(stats.pass_rate) }}%</div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <div style="color: var(--text-light); font-size: 0.875rem;">Total Students</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">{{ stats.total_students }}</div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Roll Number</th>
+                <th>Marks</th>
+                <th>Percentage</th>
+                <th>Grade</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for res in results %}
+            <tr>
+                <td style="font-weight: 600;">{{ res.student.roll_number }}</td>
+                <td>{{ res.obtained_marks }} / {{ res.total_marks }}</td>
+                <td>{{ "%.1f"|format(res.percentage) }}%</td>
+                <td>
+                    <span
+                        class="badge {% if res.grade == 'F' %}badge-danger{% elif res.grade in ['A', 'B'] %}badge-success{% else %}badge-warning{% endif %}">
+                        {{ res.grade }}
+                    </span>
+                </td>
+                <td>
+                    <a href="/student/{{ course_code }}/{{ res.student.roll_number }}" class="btn btn-primary"
+                        style="font-size: 0.875rem;">Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

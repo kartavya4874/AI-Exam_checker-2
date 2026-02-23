@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Exam Checker{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>Course Dashboard</h1>
+    <p style="color: var(--text-light)">Overview of all evaluated courses.</p>
+</div>
+
+<div class="card">
+    {% if courses %}
+    <table>
+        <thead>
+            <tr>
+                <th>Course Code</th>
+                <th>Course Name</th>
+                <th>Department</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for course in courses %}
+            <tr>
+                <td style="font-weight: 600;">{{ course.code }}</td>
+                <td>{{ course.name }}</td>
+                <td>{{ course.department }}</td>
+                <td>
+                    <a href="/course/{{ course.code }}" class="btn btn-primary" style="font-size: 0.875rem;">View Results</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No courses have been processed yet. Use the GUI to start an evaluation.</p>
+    {% endif %}
+</div>
+{% endblock %}
