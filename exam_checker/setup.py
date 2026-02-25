@@ -1,6 +1,6 @@
 """
 One-command setup script for the Hybrid AI Exam Checking System.
-testing phase
+
 Run:  python setup.py
 
 Steps performed:
