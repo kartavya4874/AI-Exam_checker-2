@@ -150,6 +150,7 @@ class ExamCheckerGUI:
 
     def _scan_files(self):
         """Scan input directory for exam files."""
+        
         input_dir = self.input_dir.get()
         if not input_dir or not os.path.isdir(input_dir):
             messagebox.showerror("Error", "Please select a valid input directory.")

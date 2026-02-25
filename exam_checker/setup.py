@@ -1,6 +1,6 @@
 """
 One-command setup script for the Hybrid AI Exam Checking System.
-In testing
+
 Run:  python setup.py
 
 Steps performed:
@@ -79,6 +79,11 @@ def step2_download_models() -> bool:
                     model_name.replace("sentence-transformers/", ""),
                     cache_folder=str(cache_dir),
                 )
+            elif "trocr" in model_name:
+                from transformers import VisionEncoderDecoderModel, AutoProcessor
+
+                AutoProcessor.from_pretrained(model_name, cache_dir=str(cache_dir))
+                VisionEncoderDecoderModel.from_pretrained(model_name, cache_dir=str(cache_dir))
             else:
                 from transformers import AutoModel, AutoProcessor
 
@@ -162,10 +167,8 @@ def step5_init_database() -> bool:
         sys.path.insert(0, str(PROJECT_ROOT.parent))
         from exam_checker.database.db_manager import DatabaseManager
 
-        db_path = os.getenv("DB_PATH", str(PROJECT_ROOT / "exam_checker.db"))
-        db = DatabaseManager(db_path)
-        db.init_db()
-        print(f"  ✅ Database initialized at: {db_path}")
+        db = DatabaseManager()                    # singleton; reads DB_PATH from config
+        print(f"  ✅ Database initialized at: {db.engine.url}")
         return True
     except Exception as exc:
         print(f"  ❌ Database init failed: {exc}")
