@@ -4,12 +4,27 @@ Tesseract-based printed text OCR.
 Wraps pytesseract for extracting printed/typed text from images.
 """
 
+import os
 import logging
 from typing import Optional
 
 from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+# ── Configure Tesseract path ──
+_TESSERACT_DEFAULT = r"C:\Users\DELL\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+
+try:
+    import pytesseract
+    _tess_cmd = os.getenv("TESSERACT_CMD", _TESSERACT_DEFAULT)
+    if os.path.isfile(_tess_cmd):
+        pytesseract.pytesseract.tesseract_cmd = _tess_cmd
+        logger.info("Tesseract configured at: %s", _tess_cmd)
+    else:
+        logger.warning("Tesseract not found at %s — relying on PATH", _tess_cmd)
+except ImportError:
+    pass
 
 
 def extract_printed_text(

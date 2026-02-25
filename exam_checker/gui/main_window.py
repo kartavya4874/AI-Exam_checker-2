@@ -226,7 +226,21 @@ class ExamCheckerGUI:
                         self.root.after(0, lambda p=pct: self.progress.configure(value=p))
                         self._log(f"  {roll}: {status}")
 
-                    result = process_course(data, client, progress_callback=progress_cb)
+                    # Bridge scan_folder output → process_course input format
+                    course_data = dict(data)  # shallow copy
+                    course_data["course_code"] = code
+                    # Convert student_files from list-of-dicts to list-of-tuples
+                    course_data["student_files"] = [
+                        (sf["roll_number"], sf["path"])
+                        for sf in data.get("student_files", [])
+                    ]
+                    # Rename teacher_samples → sample_files
+                    course_data["sample_files"] = data.get("teacher_samples", [])
+                    # Provide empty defaults for keys process_course expects
+                    course_data.setdefault("answer_key_data", {})
+                    course_data.setdefault("marks_map", {})
+
+                    result = process_course(course_data, client, progress_callback=progress_cb)
 
                     avg = result.get("statistics", {}).get("mean_percentage", 0)
                     self.root.after(0, lambda c=code, a=avg: self.course_tree.set(c, "status", "completed"))

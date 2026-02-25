@@ -74,7 +74,7 @@ def scan_folder(root_path: str) -> Dict[str, Dict[str, Any]]:
 
             stem = fpath.stem  # filename without extension
             parts = stem.split("_", 1)
-            print(f"\n\n{parts}\n\n")
+
 
             if len(parts) < 2:
                 logger.warning(
