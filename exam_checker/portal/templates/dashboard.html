@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Checker — Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #334155;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            color: #a5b4fc;
+            margin-bottom: 0.8rem;
+        }
+
+        .card .stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.8rem;
+        }
+
+        .card .stat {
+            text-align: center;
+        }
+
+        .card .stat .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        .card .stat .label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-completed {
+            background: #064e3b;
+            color: #6ee7b7;
+        }
+
+        .badge-pending {
+            background: #78350f;
+            color: #fbbf24;
+        }
+
+        .badge-processing {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        a {
+            color: #818cf8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 4rem;
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📋 Exam Checker Dashboard</h1>
+        {% if courses %}
+        <div class="card-grid">
+            {% for course in courses %}
+            <a href="/course/{{ course.course_code }}" style="text-decoration:none;">
+                <div class="card">
+                    <h2>{{ course.course_code }}</h2>
+                    <span class="badge badge-{{ course.status }}">{{ course.status }}</span>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">{{ course.total_students }}</div>
+                            <div class="label">Students</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">{{ course.processed_students }}</div>
+                            <div class="label">Processed</div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty">No courses processed yet. Use the GUI or CLI to start processing.</div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

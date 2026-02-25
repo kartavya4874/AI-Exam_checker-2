@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ course_code }} — Results</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            color: #a5b4fc;
+        }
+
+        .breadcrumb {
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .breadcrumb a {
+            color: #818cf8;
+            text-decoration: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #334155;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-top: 1px solid #334155;
+        }
+
+        tr:hover td {
+            background: #263348;
+        }
+
+        .grade {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .grade-a {
+            color: #6ee7b7;
+        }
+
+        .grade-b {
+            color: #60a5fa;
+        }
+
+        .grade-c {
+            color: #fbbf24;
+        }
+
+        .grade-d {
+            color: #fb923c;
+        }
+
+        .grade-f {
+            color: #f87171;
+        }
+
+        a {
+            color: #818cf8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="breadcrumb"><a href="/">Dashboard</a> → {{ course_code }}</div>
+        <h1>{{ course_code }} Results</h1>
+        <p style="color:#94a3b8; margin-bottom:1.5rem;">{{ students|length }} students</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Roll Number</th>
+                    <th>Marks</th>
+                    <th>Percentage</th>
+                    <th>Grade</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td><a href="/course/{{ course_code }}/student/{{ s.roll_number }}">{{ s.roll_number }}</a></td>
+                    <td>{{ s.total_marks_obtained }}/{{ s.total_marks_allocated }}</td>
+                    <td>{{ s.percentage }}%</td>
+                    <td>
+                        {% set g = s.grade|lower %}
+                        <span
+                            class="grade {% if 'a' in g %}grade-a{% elif 'b' in g %}grade-b{% elif 'c' in g %}grade-c{% elif 'd' in g %}grade-d{% else %}grade-f{% endif %}">
+                            {{ s.grade }}
+                        </span>
+                    </td>
+                    <td>{{ s.status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
