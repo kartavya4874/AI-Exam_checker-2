@@ -7,7 +7,8 @@ Two strategies:
 """
 
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Any
+from threading import Lock
 
 import cv2
 import numpy as np
@@ -93,87 +94,104 @@ def _estimate_quality(image: Image.Image) -> float:
     return float(quality)
 
 
-def _segment_sam(page_image: Image.Image) -> List[SegmentResult]:
-    """
-    Segment using SAM (Segment Anything Model) from HuggingFace.
+class RegionSegmenter:
+    """Singleton for SAM-based region segmentation."""
+    _instance: Optional["RegionSegmenter"] = None
+    _lock = Lock()
 
-    Args:
-        page_image: PIL Image.
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
 
-    Returns:
-        List of (bbox, cropped_image) tuples.
-    """
-    from transformers import SamModel, SamProcessor
-    import torch
-
-    processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
-    model = SamModel.from_pretrained("facebook/sam-vit-base")
-
-    # SAM auto-mask generation using grid-point prompting
-    w, h = page_image.size
-
-    # Create a grid of input points
-    grid_size = 8
-    points = []
-    for gy in range(1, grid_size):
-        for gx in range(1, grid_size):
-            px = int(gx * w / grid_size)
-            py = int(gy * h / grid_size)
-            points.append([px, py])
-
-    results = []
-    seen_regions = []
-
-    for point in points:
+    def __init__(self):
+        if self._initialized:
+            return
+        
+        logger.info("Loading SAM model (facebook/sam-vit-base)...")
         try:
-            inputs = processor(
-                page_image,
-                input_points=[[[point]]],
-                return_tensors="pt",
-            )
+            from transformers import SamModel, SamProcessor
+            import torch
+            
+            self.device = "cuda" if torch.cuda.is_available() and torch.cuda.get_device_properties(0).total_memory > 2e9 else "cpu"
+            self.processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
+            self.model = SamModel.from_pretrained("facebook/sam-vit-base").to(self.device)
+            self._initialized = True
+            logger.info("SAM model loaded successfully on %s", self.device)
+        except Exception as exc:
+            logger.error("Failed to load SAM: %s", exc)
+            self.processor = None
+            self.model = None
+            self._initialized = True
 
-            with torch.no_grad():
-                outputs = model(**inputs)
+    def segment(self, page_image: Image.Image) -> List[SegmentResult]:
+        """Segment a page using optimized SAM inference."""
+        if self.model is None or self.processor is None:
+            return []
 
-            masks = processor.image_processor.post_process_masks(
-                outputs.pred_masks.cpu(),
-                inputs["original_sizes"].cpu(),
-                inputs["reshaped_input_sizes"].cpu(),
-            )
+        import torch
+        w, h = page_image.size
+        
+        # Grid points for prompting
+        grid_size = 8
+        points = []
+        for gy in range(1, grid_size):
+            for gx in range(1, grid_size):
+                px = int(gx * w / grid_size)
+                py = int(gy * h / grid_size)
+                points.append([px, py])
 
-            for mask_tensor in masks:
-                for mi in range(mask_tensor.shape[1]):
-                    mask = mask_tensor[0, mi].numpy().astype(np.uint8)
+        # Batch process points
+        inputs = self.processor(
+            page_image,
+            input_points=[[points]],
+            return_tensors="pt",
+        ).to(self.device)
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+
+        masks = self.processor.image_processor.post_process_masks(
+            outputs.pred_masks.cpu(),
+            inputs["original_sizes"].cpu(),
+            inputs["reshaped_input_sizes"].cpu(),
+        )
+
+        results = []
+        seen_regions = []
+
+        # Process masks (SAM returns 3 masks per point, we take the best/middle one)
+        for mask_tensor in masks:
+            # mask_tensor shape: [1, num_points, 3, H, W]
+            for pt_idx in range(mask_tensor.shape[1]):
+                # Heuristic: usually the 2nd mask (index 1) is the most useful "object"
+                for m_idx in [1, 0, 2]:
+                    mask = mask_tensor[0, pt_idx, m_idx].numpy().astype(np.uint8)
                     area = np.sum(mask > 0)
                     total = mask.size
-
-                    # Filter: keep answer-sized regions (1%–50% of page)
                     ratio = area / total
-                    if ratio < 0.01 or ratio > 0.50:
-                        continue
 
-                    # Get bounding box
-                    ys, xs = np.where(mask > 0)
-                    if len(xs) == 0:
-                        continue
-                    bbox = (int(np.min(xs)), int(np.min(ys)),
-                            int(np.max(xs)), int(np.max(ys)))
+                    if 0.01 < ratio < 0.50:
+                        ys, xs = np.where(mask > 0)
+                        if len(xs) == 0: continue
+                        bbox = (int(np.min(xs)), int(np.min(ys)),
+                                int(np.max(xs)), int(np.max(ys)))
+                        
+                        if not _is_duplicate_region(bbox, seen_regions):
+                            seen_regions.append(bbox)
+                            cropped = crop_region(page_image, bbox)
+                            results.append((bbox, cropped))
+                            break # Found a good mask for this point
 
-                    # Skip if too similar to existing regions
-                    if _is_duplicate_region(bbox, seen_regions, overlap_threshold=0.7):
-                        continue
+        results.sort(key=lambda r: (r[0][1], r[0][0]))
+        return results
 
-                    seen_regions.append(bbox)
-                    cropped = crop_region(page_image, bbox)
-                    results.append((bbox, cropped))
-
-        except Exception as exc:
-            logger.debug("SAM point %s failed: %s", point, exc)
-            continue
-
-    # Sort top-to-bottom, left-to-right
-    results.sort(key=lambda r: (r[0][1], r[0][0]))
-    return results
+def _segment_sam(page_image: Image.Image) -> List[SegmentResult]:
+    """Shim for existing code."""
+    segmenter = RegionSegmenter()
+    return segmenter.segment(page_image)
 
 
 def _segment_projection(page_image: Image.Image) -> List[SegmentResult]:

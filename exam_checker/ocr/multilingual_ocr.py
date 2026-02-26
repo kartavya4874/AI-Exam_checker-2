@@ -21,7 +21,7 @@ class MultilingualOCR:
     _instance: Optional["MultilingualOCR"] = None
     _lock = Lock()
 
-    SUPPORTED_LANGUAGES = ["en", "ur", "hi", "ar"]
+    SUPPORTED_LANGUAGES = ["en", "ar", "fa", "ur", "ug"]
 
     def __new__(cls):
         """Ensure only one instance is created."""

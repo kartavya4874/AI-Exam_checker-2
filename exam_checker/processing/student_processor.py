@@ -110,14 +110,19 @@ def process_student(
             })
             return result
 
-        # Step 4: Segment regions per page
-        page_maps = []
-        for i, page in enumerate(non_blank_pages):
+        # Step 4: Segment regions per page (Parallelized)
+        from concurrent.futures import ThreadPoolExecutor
+
+        def process_single_page(page):
             regions = segment_regions(page)
             ocr_text = route_ocr(page, context="auto")
-            q_map = map_questions_to_regions(ocr_text, regions, page.height)
-            page_maps.append(q_map)
-            logger.debug("Page %d: %d regions, %d questions", i + 1, len(regions), len(q_map))
+            return map_questions_to_regions(ocr_text, regions, page.height)
+
+        with ThreadPoolExecutor(max_workers=min(len(non_blank_pages), 4)) as executor:
+            page_maps = list(executor.map(process_single_page, non_blank_pages))
+        
+        for i, q_map in enumerate(page_maps):
+            logger.debug("Page %d: %d questions", i + 1, len(q_map))
 
         # Step 5: Merge multi-page questions
         merged_questions = merge_multi_page_questions(page_maps)
